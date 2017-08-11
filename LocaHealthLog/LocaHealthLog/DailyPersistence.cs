@@ -24,6 +24,8 @@ namespace LocaHealthLog
 
         private static readonly string authUrl = $"{host}/oauth/auth";
 
+        private static readonly string approveUrl = $"{host}/oauth/approval.do";
+
         private static readonly string redirectUri = "https://localhost";
 
         private static readonly string userAgent = "loca health log";
@@ -44,9 +46,8 @@ namespace LocaHealthLog
                 string password = GetEnvironmentVariable("Password");
 
                 await LoginAsync(log, loginId, password);
-                string token = await AuthenticateAsync(log, clientId);
-
-                log.Info($"Token: {token}");
+                string oAuthToken = await AuthenticateAsync(log, clientId);
+                string code = await ApproveAsync(log, oAuthToken);
             }
             catch (Exception e)
             {
@@ -108,13 +109,43 @@ namespace LocaHealthLog
                     {
                         string html = await reader.ReadToEndAsync();
 
-                        return await ScrapeTokenAsync(html);
+                        return await ScrapeOAuthTokenAsync(html);
                     }
                 }
             }
         }
 
-        private static async Task<string> ScrapeTokenAsync(string html)
+        private static async Task<string> ApproveAsync(TraceWriter log, string oAuthToken)
+        {
+            log.Info("Start approve");
+
+            using (var request = new HttpRequestMessage())
+            {
+                request.Method = HttpMethod.Post;
+                request.RequestUri = new Uri(approveUrl);
+                request.Headers.UserAgent.ParseAdd(userAgent);
+                request.Content = new FormUrlEncodedContent(new KeyValuePair<string, string>[]
+                {
+                    new KeyValuePair<string, string>("approval", "true"),
+                    new KeyValuePair<string, string>("oauth_token", oAuthToken),
+                });
+
+                using (HttpResponseMessage response = await client.SendAsync(request))
+                {
+                    log.Info($"Approve response status: {response.StatusCode.ToString()}");
+
+                    var contentStream = await response.Content.ReadAsStreamAsync();
+                    using(var reader = new StreamReader(contentStream, Encoding.GetEncoding("Shift_JIS")))
+                    {
+                        string html = await reader.ReadToEndAsync();
+
+                        return await ScrapeCodeAsync(html);
+                    }
+                }
+            }
+        }
+
+        private static async Task<string> ScrapeOAuthTokenAsync(string html)
         {
             var parser = new HtmlParser();
             var doc = await parser.ParseAsync(html);
@@ -123,6 +154,18 @@ namespace LocaHealthLog
                           .Cast<IHtmlInputElement>()
                           .Where(elem => elem.Name == "oauth_token")
                           .Select(elem => elem.Value)
+                          .First();
+        }
+
+        private static async Task<string> ScrapeCodeAsync(string html)
+        {
+            var parser = new HtmlParser();
+            var doc = await parser.ParseAsync(html);
+
+            return doc.All.Where(elem => elem is IHtmlTextAreaElement)
+                          .Cast<IHtmlTextAreaElement>()
+                          .Where(elem => elem.Id == "code")
+                          .Select(elem => elem.TextContent)
                           .First();
         }
 
