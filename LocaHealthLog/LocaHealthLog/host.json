@@ -1,0 +1,8 @@
+{
+  "watchDirectories": [ "Shared" ],
+  "functions": [ "DailyPersistence" ],
+  "tracing": {
+    "consoleLevel": "info",
+    "fileLoggingMode": "debugOnly"
+  }
+}
