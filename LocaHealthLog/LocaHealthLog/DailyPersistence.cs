@@ -1,11 +1,16 @@
+using AngleSharp.Parser.Html;
+using AngleSharp.Dom.Html;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace LocaHealthLog
 {
@@ -17,13 +22,13 @@ namespace LocaHealthLog
 
         private static readonly string loginUrl = $"{host}/login_oauth.do";
 
-        private static readonly string authUrl = $"{host}/";
+        private static readonly string authUrl = $"{host}/oauth/auth";
 
         private static readonly string redirectUri = "https://localhost";
 
         private static readonly string userAgent = "loca health log";
 
-        private static HttpClient client = new HttpClient(new HttpClientHandler() { UseCookies = false });
+        private static HttpClient client = new HttpClient(new HttpClientHandler() { UseCookies = true });
 
         // ñàì˙01:00Ç…ãNìÆÇ∑ÇÈÅB
         [FunctionName("DailyPersistence")]
@@ -39,6 +44,9 @@ namespace LocaHealthLog
                 string password = GetEnvironmentVariable("Password");
 
                 await LoginAsync(log, loginId, password);
+                string token = await AuthenticateAsync(log, clientId);
+
+                log.Info($"Token: {token}");
             }
             catch (Exception e)
             {
@@ -72,6 +80,50 @@ namespace LocaHealthLog
                     log.Info($"Log in response status: {response.StatusCode.ToString()}");
                 }
             }
+        }
+
+        private static async Task<string> AuthenticateAsync(TraceWriter log, string clientId)
+        {
+            log.Info("Start authentication");
+
+            var queryParams = HttpUtility.ParseQueryString(String.Empty);
+            queryParams["client_id"] = clientId;
+            queryParams["redirect_uri"] = redirectUri;
+            queryParams["scope"] = "innerscan";
+            queryParams["response_type"] = "code";
+
+            var uriBuilder = new UriBuilder(authUrl);
+            uriBuilder.Query = queryParams.ToString();
+
+            using (var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.ToString()))
+            {
+                request.Headers.UserAgent.ParseAdd(userAgent);
+
+                using (HttpResponseMessage response = await client.SendAsync(request))
+                {
+                    log.Info($"Authentication response status: {response.StatusCode.ToString()}");
+
+                    var contentStream = await response.Content.ReadAsStreamAsync();
+                    using(var reader = new StreamReader(contentStream, Encoding.GetEncoding("Shift_JIS")))
+                    {
+                        string html = await reader.ReadToEndAsync();
+
+                        return await ScrapeTokenAsync(html);
+                    }
+                }
+            }
+        }
+
+        private static async Task<string> ScrapeTokenAsync(string html)
+        {
+            var parser = new HtmlParser();
+            var doc = await parser.ParseAsync(html);
+
+            return doc.All.Where(elem => elem is IHtmlInputElement)
+                          .Cast<IHtmlInputElement>()
+                          .Where(elem => elem.Name == "oauth_token")
+                          .Select(elem => elem.Value)
+                          .First();
         }
 
         private static string GetEnvironmentVariable(string key)
