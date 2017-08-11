@@ -26,6 +26,8 @@ namespace LocaHealthLog
 
         private static readonly string approveUrl = $"{host}/oauth/approval.do";
 
+        private static readonly string tokenUrl = $"{host}/oauth/token";
+
         private static readonly string redirectUri = "https://localhost";
 
         private static readonly string userAgent = "loca health log";
@@ -48,6 +50,7 @@ namespace LocaHealthLog
                 await LoginAsync(log, loginId, password);
                 string oAuthToken = await AuthenticateAsync(log, clientId);
                 string code = await ApproveAsync(log, oAuthToken);
+                Token token = await GetTokenAsync(log, clientId, clientSecret, code);
             }
             catch (Exception e)
             {
@@ -145,6 +148,39 @@ namespace LocaHealthLog
             }
         }
 
+        private static async Task<Token> GetTokenAsync(TraceWriter log, string clientId, string clientSecret, string code)
+        {
+            log.Info("Start get token");
+
+            var queryParams = HttpUtility.ParseQueryString(String.Empty);
+            queryParams["client_id"] = clientId;
+            queryParams["client_secret"] = clientSecret;
+            queryParams["redirect_uri"] = successUrl;
+            queryParams["code"] = code;
+            queryParams["grant_type"] = "authorization_code";
+
+            var uriBuilder = new UriBuilder(tokenUrl);
+            uriBuilder.Query = queryParams.ToString();
+
+            using (var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.ToString()))
+            {
+                request.Headers.UserAgent.ParseAdd(userAgent);
+
+                using (HttpResponseMessage response = await client.SendAsync(request))
+                {
+                    log.Info($"Get token response status: {response.StatusCode.ToString()}");
+
+                    var contentStream = await response.Content.ReadAsStreamAsync();
+                    using(var reader = new StreamReader(contentStream, Encoding.UTF8))
+                    {
+                        string json = await reader.ReadToEndAsync();
+
+                        return JsonConvert.DeserializeObject<Token>(json);
+                    }
+                }
+            }
+        }
+
         private static async Task<string> ScrapeOAuthTokenAsync(string html)
         {
             var parser = new HtmlParser();
@@ -182,6 +218,18 @@ namespace LocaHealthLog
                 var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
                 return secret[key];
             }
+        }
+
+        class Token
+        {
+            [JsonProperty("access_token")]
+            public string AccessToken { get; set; }
+
+            [JsonProperty("expires_in")]
+            public string ExpiresIn { get; set; }
+
+            [JsonProperty("refresh_token")]
+            public string RefreshToken { get; set; }
         }
     }
 }
