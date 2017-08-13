@@ -15,7 +15,7 @@ namespace LocaHealthLog
 
         private static HttpClient client = new HttpClient(new HttpClientHandler() { UseCookies = true });
 
-        // 毎日01:00に起動する。
+        // start at 01:00 every day.
         [FunctionName("DailyPersistence")]
         public static async void Run([TimerTrigger("0 0 1 * * *")]TimerInfo myTimer, TraceWriter log)
         {
@@ -64,7 +64,7 @@ namespace LocaHealthLog
             }
             else
             {
-                // ローカルで実行するときはファイルから環境変数を読み込む。
+                // load environment variables from file if executed at local.
                 var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
                 return secret[key];
             }
