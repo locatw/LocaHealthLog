@@ -188,13 +188,11 @@ namespace LocaHealthLog
         {
             log.Info("Start get inner scan status");
 
-            var tags = Enumerable.Range(6021, 9);
-
             var queryParams = HttpUtility.ParseQueryString(String.Empty);
             queryParams["access_token"] = accessToken;
             queryParams["date"] = "1"; // 1: 測定日付
             queryParams["from"] = DateTime.Today.AddDays(-1).ToString("yyyyMMddHHmmss");
-            queryParams["tag"] = string.Join(",", tags.Select(tag => tag.ToString()));
+            queryParams["tag"] = string.Join(",", Enum.GetValues(typeof(InnerScanTag)).Cast<int>().Select(tag => tag.ToString()));
 
             var uriBuilder = new UriBuilder(innerScanStatusUrl);
             uriBuilder.Query = queryParams.ToString();
@@ -255,6 +253,28 @@ namespace LocaHealthLog
                 var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
                 return secret[key];
             }
+        }
+
+        enum InnerScanTag
+        {
+            // 体重(kg)
+            Weight = 6021,
+            // 体脂肪率(%)
+            BodyFatPercentage = 6022,
+            // 筋肉量(kg)
+            MuscleMass = 6023,
+            // 筋肉スコア
+            MuscleScore = 6024,
+            // 内臓脂肪レベル2
+            VisceralFatLevel2 = 6025,
+            // 内臓脂肪レベル
+            VesceralFatLevel = 6026,
+            // 基礎代謝量(kcal)
+            BasalMetabolicRate = 6027,
+            // 体内年齢(才)
+            BodyAge = 6028,
+            // 推定骨量(kg)
+            EstimatedBoneMass = 6029
         }
 
         class Token
