@@ -1,4 +1,6 @@
-﻿namespace LocaHealthLog.HealthPlanet
+﻿using System;
+
+namespace LocaHealthLog.HealthPlanet
 {
     enum InnerScanTag
     {
@@ -20,5 +22,20 @@
         BodyAge = 6028,
         // 推定骨量(kg)
         EstimatedBoneMass = 6029
+    }
+
+    static class InnerScanTagHelper
+    {
+        public static InnerScanTag MakeFrom(string value)
+        {
+            if (Enum.TryParse(value, out InnerScanTag tag))
+            {
+                return tag;
+            }
+            else
+            {
+                throw new Exception($"Cannot make InnerScanTag: {value}");
+            }
+        }
     }
 }

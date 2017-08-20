@@ -1,11 +1,15 @@
 using LocaHealthLog.HealthPlanet;
+using LocaHealthLog.Storage;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace LocaHealthLog
 {
@@ -44,6 +48,35 @@ namespace LocaHealthLog
 
                 log.Info("Start get inner scan status");
                 Status statsu = await api.GetInnerScanStatus(token.AccessToken);
+
+                var storageConnectionString = LoadStorageConnectionString();
+                var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
+                var tableClient = storageAccount.CreateCloudTableClient();
+                var table = tableClient.GetTableReference("LocaHealthLog");
+                await table.CreateIfNotExistsAsync();
+
+                var entityFactory = new EntityFactory();
+                entityFactory.MakeFrom(statsu)
+                    .GroupBy(entity => entity.PartitionKey)
+                    .Select(group =>
+                    {
+                        var partitionKey = group.Key;
+                        var condition = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
+                        var query = new TableQuery<InnerScanStatusEntity>().Where(condition);
+                        var existingEntities = table.ExecuteQuery(query);
+
+                        var newEntities = group.Except(existingEntities, new EntityComparer());
+
+                        return newEntities;
+                    })
+                    .Where(entities => 0 < entities.Count())
+                    .ToList()
+                    .ForEach(async entities =>
+                    {
+                        var batchOperation = new TableBatchOperation();
+                        entities.ToList().ForEach(entity => batchOperation.Insert(entity));
+                        IList<TableResult> results = await table.ExecuteBatchAsync(batchOperation);
+                    });
             }
             catch (Exception e)
             {
@@ -68,6 +101,12 @@ namespace LocaHealthLog
                 var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
                 return secret[key];
             }
+        }
+
+        private static string LoadStorageConnectionString()
+        {
+            var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
+            return secret["StorageConnectionString"];
         }
     }
 }
