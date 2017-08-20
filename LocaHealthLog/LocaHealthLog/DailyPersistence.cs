@@ -14,8 +14,6 @@ namespace LocaHealthLog
     {
         private static readonly string userAgent = "loca health log";
 
-        private static HttpClient client = new HttpClient(new HttpClientHandler() { UseCookies = true });
-
         // start at 01:00 every day.
         [FunctionName("DailyPersistence")]
         public static async void Run([TimerTrigger("0 0 1 * * *")]TimerInfo myTimer, TraceWriter log)
