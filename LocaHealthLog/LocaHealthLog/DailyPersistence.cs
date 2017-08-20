@@ -47,9 +47,11 @@ namespace LocaHealthLog
                 Status status = await api.GetInnerScanStatus(token.AccessToken);
 
                 var storageClient = new StorageClient();
+                log.Info("Start connect to table storage");
                 await storageClient.ConnectAsync(LoadStorageConnectionString());
 
                 var entityFactory = new EntityFactory();
+                log.Info("Start inserting entities to storage");
                 await storageClient.BatchInsertAsync(entityFactory.MakeFrom(status));
             }
             catch (Exception e)
