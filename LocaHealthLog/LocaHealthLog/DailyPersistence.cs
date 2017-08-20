@@ -44,13 +44,13 @@ namespace LocaHealthLog
                 Token token = await api.GetTokenAsync(clientId, clientSecret, code);
 
                 log.Info("Start get inner scan status");
-                Status statsu = await api.GetInnerScanStatus(token.AccessToken);
+                Status status = await api.GetInnerScanStatus(token.AccessToken);
 
                 var storageClient = new StorageClient();
                 await storageClient.ConnectAsync(LoadStorageConnectionString());
 
                 var entityFactory = new EntityFactory();
-                await storageClient.BatchInsertAsync(entityFactory.MakeFrom(statsu));
+                await storageClient.BatchInsertAsync(entityFactory.MakeFrom(status));
             }
             catch (Exception e)
             {
