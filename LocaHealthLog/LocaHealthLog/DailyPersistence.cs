@@ -54,7 +54,7 @@ namespace LocaHealthLog
             }
             catch (Exception e)
             {
-                log.Info($"Exception: {e.ToString()}");
+                log.Error($"Exception: {e.ToString()}");
             }
             finally
             {
