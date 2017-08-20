@@ -13,9 +13,9 @@ namespace LocaHealthLog
     {
         private static readonly string userAgent = "loca health log";
 
-        // start at 01:00 every day.
+        // start at 01:00 JST every day.
         [FunctionName("DailyPersistence")]
-        public static async void Run([TimerTrigger("0 0 1 * * *")]TimerInfo myTimer, TraceWriter log)
+        public static async void Run([TimerTrigger("0 0 16 * * *")]TimerInfo myTimer, TraceWriter log)
         {
             log.Info($"Start DailyPersistence at: {DateTime.Now}");
 
