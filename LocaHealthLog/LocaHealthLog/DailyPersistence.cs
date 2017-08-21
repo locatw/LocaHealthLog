@@ -4,6 +4,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO;
 
@@ -15,7 +16,7 @@ namespace LocaHealthLog
 
         // start at 01:00 JST every day.
         [FunctionName("DailyPersistence")]
-        public static async void Run([TimerTrigger("0 0 16 * * *")]TimerInfo myTimer, TraceWriter log)
+        public static async Task Run([TimerTrigger("0 0 16 * * *")]TimerInfo myTimer, TraceWriter log)
         {
             log.Info($"Start DailyPersistence at: {DateTime.Now}");
 
