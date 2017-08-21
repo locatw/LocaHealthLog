@@ -79,8 +79,16 @@ namespace LocaHealthLog
 
         private static string LoadStorageConnectionString()
         {
-            var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
-            return secret["StorageConnectionString"];
+            string value = Environment.GetEnvironmentVariable("StorageConnectionString");
+            if (value != null)
+            {
+                return value;
+            }
+            else
+            {
+                var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
+                return secret["StorageConnectionString"];
+            }
         }
     }
 }
