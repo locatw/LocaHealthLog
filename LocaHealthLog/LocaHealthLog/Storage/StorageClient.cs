@@ -1,5 +1,6 @@
 ﻿using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,32 @@ namespace LocaHealthLog.Storage
             table = tableClient.GetTableReference(tableName);
 
             await table.CreateIfNotExistsAsync();
+        }
+
+        public DateTimeOffset? LoadLastMeasurementDate()
+        {
+            var partitionCond = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "App");
+            var rowCond = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, "LastMeasurementDate");
+            var cond = TableQuery.CombineFilters(partitionCond, TableOperators.And, rowCond);
+            var query = new TableQuery<AppPropertyEntity>().Where(cond);
+            var result = table.ExecuteQuery(query);
+
+            if (0 < result.Count())
+            {
+                return result.First().LastMeasurementDate;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public async Task UpdateLastMeasurementDate(DateTimeOffset lastMeasurementDate)
+        {
+            var entity = new AppPropertyEntity() { LastMeasurementDate = lastMeasurementDate };
+            var insertOperation = TableOperation.InsertOrReplace(entity);
+
+            await table.ExecuteAsync(insertOperation);
         }
 
         public async Task BatchInsertAsync(IEnumerable<InnerScanStatusEntity> entities)

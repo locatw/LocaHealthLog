@@ -4,6 +4,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +15,8 @@ namespace LocaHealthLog
     {
         private static readonly string userAgent = "loca health log";
 
+        private static readonly TimeZoneInfo jstTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
+
         // start at 01:00 JST every day.
         [FunctionName("DailyPersistence")]
         public static async Task Run([TimerTrigger("0 0 16 * * *")]TimerInfo myTimer, TraceWriter log)
@@ -22,6 +25,23 @@ namespace LocaHealthLog
 
             try
             {
+                var storageClient = new StorageClient();
+                log.Info("Start connect to table storage");
+                await storageClient.ConnectAsync(LoadStorageConnectionString());
+
+                var lastMeasurementDate = storageClient.LoadLastMeasurementDate();
+                DateTimeOffset? from;
+                if (lastMeasurementDate.HasValue)
+                {
+                    log.Info($"Last measurement date: {lastMeasurementDate.Value.ToString()}");
+                    from = lastMeasurementDate.Value.ToOffset(jstTimeZone.BaseUtcOffset);
+                }
+                else
+                {
+                    log.Info("No measurement");
+                    from = null;
+                }
+
                 string clientId = GetEnvironmentVariable("ClientId");
                 string clientSecret = GetEnvironmentVariable("ClientSecret");
                 string loginId = GetEnvironmentVariable("LoginId");
@@ -42,15 +62,19 @@ namespace LocaHealthLog
                 Token token = await api.GetTokenAsync(clientId, clientSecret, code);
 
                 log.Info("Start get inner scan status");
-                Status status = await api.GetInnerScanStatus(token.AccessToken);
+                Status status = await api.GetInnerScanStatus(token.AccessToken, from);
 
-                var storageClient = new StorageClient();
-                log.Info("Start connect to table storage");
-                await storageClient.ConnectAsync(LoadStorageConnectionString());
-
-                var entityFactory = new EntityFactory();
                 log.Info("Start inserting entities to storage");
-                await storageClient.BatchInsertAsync(entityFactory.MakeFrom(status));
+                var entityFactory = new EntityFactory();
+                IEnumerable<InnerScanStatusEntity> entities = entityFactory.MakeFrom(status);
+                await storageClient.BatchInsertAsync(entities);
+
+                DateTimeOffset measurementDate = entities.Select(entity => entity.MeasurementDate).Max();
+                if (!lastMeasurementDate.HasValue || lastMeasurementDate.Value < measurementDate)
+                {
+                    log.Info("Start updating last measurement date");
+                    await storageClient.UpdateLastMeasurementDate(measurementDate);
+                }
             }
             catch (Exception e)
             {

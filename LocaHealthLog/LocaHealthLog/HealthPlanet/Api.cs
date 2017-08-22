@@ -150,12 +150,15 @@ namespace LocaHealthLog.HealthPlanet
             }
         }
 
-        public async Task<Status> GetInnerScanStatus(string accessToken)
+        public async Task<Status> GetInnerScanStatus(string accessToken, DateTimeOffset? from)
         {
             var queryParams = HttpUtility.ParseQueryString(String.Empty);
             queryParams["access_token"] = accessToken;
             queryParams["date"] = "1"; // 1: 測定日付
-            queryParams["from"] = DateTime.Today.AddDays(-1).ToString("yyyyMMddHHmmss");
+            if (from.HasValue)
+            {
+                queryParams["from"] = from.Value.ToString("yyyyMMddHHmmss");
+            }
             queryParams["tag"] = string.Join(",", Enum.GetValues(typeof(InnerScanTag)).Cast<int>().Select(tag => tag.ToString()));
 
             var uriBuilder = new UriBuilder(innerScanStatusUrl);
