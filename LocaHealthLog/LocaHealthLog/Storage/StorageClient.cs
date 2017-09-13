@@ -40,6 +40,21 @@ namespace LocaHealthLog.Storage
             }
         }
 
+        public IEnumerable<InnerScanStatusEntity> LoadMeasurementData(string tag, DateTimeOffset begin, DateTimeOffset end)
+        {
+            var tagCond =
+                TableQuery.GenerateFilterCondition("Tag", QueryComparisons.Equal, tag);
+            var measurementDateCond =
+                TableQuery.CombineFilters(
+                    TableQuery.GenerateFilterConditionForDate("MeasurementDate", QueryComparisons.GreaterThanOrEqual, begin),
+                    TableOperators.And,
+                    TableQuery.GenerateFilterConditionForDate("MeasurementDate", QueryComparisons.LessThan, end));
+            var cond = TableQuery.CombineFilters(tagCond, TableOperators.And, measurementDateCond);
+            var query = new TableQuery<InnerScanStatusEntity>().Where(cond);
+
+            return table.ExecuteQuery(query);
+        }
+
         public async Task UpdateLastMeasurementDate(DateTimeOffset lastMeasurementDate)
         {
             var entity = new AppPropertyEntity() { LastMeasurementDate = lastMeasurementDate };
