@@ -2,12 +2,10 @@ using LocaHealthLog.HealthPlanet;
 using LocaHealthLog.Storage;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
-using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.IO;
 
 namespace LocaHealthLog
 {
@@ -25,9 +23,11 @@ namespace LocaHealthLog
 
             try
             {
+                var appConfig = AppConfig.Load();
+
                 var storageClient = new StorageClient();
                 log.Info("Start connect to table storage");
-                await storageClient.ConnectAsync(LoadStorageConnectionString());
+                await storageClient.ConnectAsync(appConfig.StorageConnectionString);
 
                 var lastMeasurementDate = storageClient.LoadLastMeasurementDate();
                 DateTimeOffset? from;
@@ -42,24 +42,19 @@ namespace LocaHealthLog
                     from = null;
                 }
 
-                string clientId = GetEnvironmentVariable("ClientId");
-                string clientSecret = GetEnvironmentVariable("ClientSecret");
-                string loginId = GetEnvironmentVariable("LoginId");
-                string password = GetEnvironmentVariable("Password");
-
                 var api = new Api(userAgent);
 
                 log.Info("Start Log in");
-                await api.LoginAsync(loginId, password);
+                await api.LoginAsync(appConfig.LoginId, appConfig.Password);
 
                 log.Info("Start authentication");
-                string oAuthToken = await api.AuthenticateAsync(clientId);
+                string oAuthToken = await api.AuthenticateAsync(appConfig.ClientId);
 
                 log.Info("Start approve");
                 string code = await api.ApproveAsync(oAuthToken);
 
                 log.Info("Start get token");
-                Token token = await api.GetTokenAsync(clientId, clientSecret, code);
+                Token token = await api.GetTokenAsync(appConfig.ClientId, appConfig.ClientSecret, code);
 
                 log.Info("Start get inner scan status");
                 Status status = await api.GetInnerScanStatus(token.AccessToken, from);
@@ -83,35 +78,6 @@ namespace LocaHealthLog
             finally
             {
                 log.Info($"Finish DailyPersistence at: {DateTime.Now}");
-            }
-        }
-
-        private static string GetEnvironmentVariable(string key)
-        {
-            string value = Environment.GetEnvironmentVariable(key);
-            if (value != null)
-            {
-                return value;
-            }
-            else
-            {
-                // load environment variables from file if executed at local.
-                var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
-                return secret[key];
-            }
-        }
-
-        private static string LoadStorageConnectionString()
-        {
-            string value = Environment.GetEnvironmentVariable("StorageConnectionString");
-            if (value != null)
-            {
-                return value;
-            }
-            else
-            {
-                var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
-                return secret["StorageConnectionString"];
             }
         }
     }

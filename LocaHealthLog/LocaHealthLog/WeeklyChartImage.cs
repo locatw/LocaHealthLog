@@ -2,10 +2,8 @@ using LocaHealthLog.HealthPlanet;
 using LocaHealthLog.Storage;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace LocaHealthLog
@@ -22,9 +20,11 @@ namespace LocaHealthLog
 
             try
             {
+                var appConfig = AppConfig.Load();
+
                 var storageClient = new StorageClient();
                 log.Info("Start connect to table storage");
-                await storageClient.ConnectAsync(LoadStorageConnectionString());
+                await storageClient.ConnectAsync(appConfig.StorageConnectionString);
 
                 var now = DateTimeOffset.UtcNow;
                 var acquisitionPeriod = new TimeSpan(7, 0, 0, 0);
@@ -40,35 +40,6 @@ namespace LocaHealthLog
             finally
             {
                 log.Info($"Finish WeeklyChartImage at: {DateTime.Now}");
-            }
-        }
-
-        private static string GetEnvironmentVariable(string key)
-        {
-            string value = Environment.GetEnvironmentVariable(key);
-            if (value != null)
-            {
-                return value;
-            }
-            else
-            {
-                // load environment variables from file if executed at local.
-                var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
-                return secret[key];
-            }
-        }
-
-        private static string LoadStorageConnectionString()
-        {
-            string value = Environment.GetEnvironmentVariable("StorageConnectionString");
-            if (value != null)
-            {
-                return value;
-            }
-            else
-            {
-                var secret = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("Secret.json"));
-                return secret["StorageConnectionString"];
             }
         }
     }
