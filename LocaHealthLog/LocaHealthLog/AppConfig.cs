@@ -9,6 +9,9 @@ namespace LocaHealthLog
     {
         private static readonly string LocalSecretFileName = "Secret.json";
 
+        public static readonly TimeZoneInfo LocalTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
+
         public static AppConfig Load()
         {
             return new AppConfig()

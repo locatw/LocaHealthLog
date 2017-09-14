@@ -8,8 +8,6 @@ namespace LocaHealthLog
 {
     class EntityFactory
     {
-        private static readonly TimeZoneInfo jstTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
-
         private static readonly Dictionary<InnerScanTag, Func<Data, InnerScanStatusEntity>> partialEntityFactory =
             new Dictionary<InnerScanTag, Func<Data, InnerScanStatusEntity>>()
             {
@@ -82,7 +80,7 @@ namespace LocaHealthLog
                 int hour = int.Parse(dataDate.Substring(8, 2));
                 int minute = int.Parse(dataDate.Substring(10, 2));
 
-                return new DateTimeOffset(year, month, day, hour, minute, 0, jstTimeZone.BaseUtcOffset);
+                return new DateTimeOffset(year, month, day, hour, minute, 0, AppConfig.LocalTimeZone.BaseUtcOffset);
             }
             catch (Exception e)
             {
@@ -98,7 +96,7 @@ namespace LocaHealthLog
                 int month = int.Parse(birthDate.Substring(4, 2));
                 int day = int.Parse(birthDate.Substring(6, 2));
 
-                return new DateTimeOffset(year, month, day, 0, 0, 0, jstTimeZone.BaseUtcOffset);
+                return new DateTimeOffset(year, month, day, 0, 0, 0, AppConfig.LocalTimeZone.BaseUtcOffset);
             }
             catch (Exception e)
             {

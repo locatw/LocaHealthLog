@@ -7,8 +7,6 @@ namespace LocaHealthLog.Storage
 {
     class AppPropertyEntity : TableEntity
     {
-        private static readonly TimeZoneInfo jstTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
-
         public AppPropertyEntity()
         {
             PartitionKey = "App";
@@ -19,7 +17,7 @@ namespace LocaHealthLog.Storage
         {
             base.ReadEntity(properties, operationContext);
 
-            LastMeasurementDate = LastMeasurementDate.ToOffset(jstTimeZone.BaseUtcOffset);
+            LastMeasurementDate = LastMeasurementDate.ToOffset(AppConfig.LocalTimeZone.BaseUtcOffset);
         }
 
         public DateTimeOffset LastMeasurementDate { get; set; }

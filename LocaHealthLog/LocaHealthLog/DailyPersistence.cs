@@ -13,8 +13,6 @@ namespace LocaHealthLog
     {
         private static readonly string userAgent = "loca health log";
 
-        private static readonly TimeZoneInfo jstTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
-
         // start at 01:00 JST every day.
         [FunctionName("DailyPersistence")]
         public static async Task Run([TimerTrigger("0 0 16 * * *")]TimerInfo myTimer, TraceWriter log)
@@ -34,7 +32,7 @@ namespace LocaHealthLog
                 if (lastMeasurementDate.HasValue)
                 {
                     log.Info($"Last measurement date: {lastMeasurementDate.Value.ToString()}");
-                    from = lastMeasurementDate.Value.ToOffset(jstTimeZone.BaseUtcOffset);
+                    from = lastMeasurementDate.Value.ToOffset(AppConfig.LocalTimeZone.BaseUtcOffset);
                 }
                 else
                 {
