@@ -1,4 +1,5 @@
-﻿using Microsoft.WindowsAzure.Storage;
+﻿using LocaHealthLog.HealthPlanet;
+using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,82 @@ namespace LocaHealthLog.Storage
     class StorageClient
     {
         private static readonly string tableName = "LocaHealthLog";
+
+        private EntityResolver<InnerScanStatusEntity> entityResolver =
+            (partitionKey, rowKey, timestamp, properties, etag) =>
+            {
+                InnerScanStatusEntity entity = null;
+
+                InnerScanTag tag = (InnerScanTag)Enum.Parse(typeof(InnerScanTag), properties["Tag"].StringValue);
+
+                switch (tag)
+                {
+                    case InnerScanTag.BasalMetabolicRate:
+                        entity = new BasalMetabolicRateEntity()
+                        {
+                            BasalMetabolicRate = properties["BasalMetabolicRate"].Int32Value.Value
+                        };
+                        break;
+                    case InnerScanTag.BodyAge:
+                        entity = new BodyAgeEntity()
+                        {
+                            BodyAge = properties["BodyAge"].Int32Value.Value
+                        };
+                        break;
+                    case InnerScanTag.BodyFatPercentage:
+                        entity = new BodyFatPercentageEntity()
+                        {
+                            BodyFatPercentage = properties["BodyFatPercentage"].DoubleValue.Value
+                        };
+                        break;
+                    case InnerScanTag.EstimatedBoneMass:
+                        entity = new EstimatedBoneMassEntity()
+                        {
+                            EstimatedBoneMass = properties["EstimatedBoneMass"].DoubleValue.Value
+                        };
+                        break;
+                    case InnerScanTag.MuscleMass:
+                        entity = new MuscleMassEntity()
+                        {
+                            MuscleMass = properties["MuscleMass"].DoubleValue.Value
+                        };
+                        break;
+                    case InnerScanTag.MuscleScore:
+                        entity = new MuscleScoreEntity()
+                        {
+                            MuscleScore = properties["MuscleScore"].Int32Value.Value
+                        };
+                        break;
+                    case InnerScanTag.VesceralFatLevel:
+                        entity = new VisceralFatLevelEntity()
+                        {
+                            VisceralFatLevel = properties["VisceralFatLeve"].Int32Value.Value
+                        };
+                        break;
+                    case InnerScanTag.VisceralFatLevel2:
+                        entity = new VisceralFatLevel2Entity()
+                        {
+                            VisceralFatLevel2 = properties["VisceralFatLevel2"].Int32Value.Value
+                        };
+                        break;
+                    case InnerScanTag.Weight:
+                        entity = new WeightEntity()
+                        {
+                            Weight = properties["Weight"].DoubleValue.Value
+                        };
+                        break;
+                    default:
+                        throw new NotImplementedException($"tag: {properties["Tag"].StringValue}");
+                }
+
+                entity.PartitionKey = partitionKey;
+                entity.RowKey = rowKey;
+                entity.Timestamp = timestamp;
+                entity.ETag = etag;
+                entity.ReadEntity(properties, null);
+
+                return entity;
+            };
 
         private CloudTable table;
 
@@ -52,7 +129,7 @@ namespace LocaHealthLog.Storage
             var cond = TableQuery.CombineFilters(tagCond, TableOperators.And, measurementDateCond);
             var query = new TableQuery<InnerScanStatusEntity>().Where(cond);
 
-            return table.ExecuteQuery(query);
+            return table.ExecuteQuery(query, entityResolver);
         }
 
         public async Task UpdateLastMeasurementDate(DateTimeOffset lastMeasurementDate)
