@@ -20,7 +20,9 @@ namespace LocaHealthLog
                 ClientSecret = GetEnvironmentVariable("ClientSecret"),
                 LoginId = GetEnvironmentVariable("LoginId"),
                 Password = GetEnvironmentVariable("Password"),
-                StorageConnectionString = GetEnvironmentVariable("StorageConnectionString")
+                StorageConnectionString = GetEnvironmentVariable("StorageConnectionString"),
+                PlotlyUserName = GetEnvironmentVariable("PlotlyUserName"),
+                PlotlyApiKey = GetEnvironmentVariable("PlotlyApiKey")
             };
         }
 
@@ -33,6 +35,10 @@ namespace LocaHealthLog
         public string Password { get; private set; }
 
         public string StorageConnectionString { get; private set; }
+
+        public string PlotlyUserName { get; private set; }
+
+        public string PlotlyApiKey { get; private set; }
 
         private AppConfig()
         { }
