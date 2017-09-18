@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 
 namespace LocaHealthLog
 {
-    public static class WeeklyChartImage
+    public static class MonthlyChartImage
     {
         // start on Saturday at 07:00 JST.
-        [FunctionName("WeeklyChartImage")]
+        [FunctionName("MonthlyChartImage")]
         public static async Task Run([TimerTrigger("0 0 22 * * 5")]TimerInfo myTimer, TraceWriter log)
         {
-            log.Info($"Start WeeklyChartImage at: {DateTime.Now}");
+            log.Info($"Start MonthlyChartImage at: {DateTime.Now}");
 
             try
             {
@@ -49,7 +49,7 @@ namespace LocaHealthLog
             }
             finally
             {
-                log.Info($"Finish WeeklyChartImage at: {DateTime.Now}");
+                log.Info($"Finish MonthlyChartImage at: {DateTime.Now}");
             }
         }
 
